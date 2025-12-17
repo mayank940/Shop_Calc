@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="menifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Payment Calculator</title>
+
+<style>
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.calculator {
+    background: #ffffff;
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    position: relative; /* for reset icon */
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+/* Reset icon */
+.reset-icon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #e9ecef;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.reset-icon:active {
+    background: #d6d8db;
+}
+
+/* Inputs */
+input {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    text-align: right;
+    font-weight: bold;
+}
+
+.readonly {
+    background: #f1f3f5;
+}
+
+/* Calculator keypad */
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.keypad button {
+    padding: 16px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #e9ecef;
+}
+
+/* Notes grid (3 × 3) */
+.notes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 12px 0;
+}
+
+.notes button {
+    padding: 16px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    background: #e9ecef;
+}
+
+/* Note actions */
+.note-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.note-actions button {
+    flex: 1;
+    padding: 12px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: #e9ecef;
+}
+
+.result {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.change-box {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.change-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.change-buttons div {
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #e9ecef;
+    font-weight: bold;
+}
+
+.error { color: red; }
+.success { color: green; }
+</style>
+</head>
+
+<body>
+
+<div class="calculator">
+    <!-- Reset icon -->
+    <button class="reset-icon" onclick="resetAllProcess()" title="Reset All">↻</button>
+
+    <h2>Shop Payment Calculator</h2>
+
+    <input type="text" id="display" placeholder="Enter calculation" readonly>
+
+    <!-- Calculator -->
+    <div class="keypad">
+        <button onclick="press('7')">7</button>
+        <button onclick="press('8')">8</button>
+        <button onclick="press('9')">9</button>
+        <button onclick="press('÷')">÷</button>
+
+        <button onclick="press('4')">4</button>
+        <button onclick="press('5')">5</button>
+        <button onclick="press('6')">6</button>
+        <button onclick="press('×')">×</button>
+
+        <button onclick="press('1')">1</button>
+        <button onclick="press('2')">2</button>
+        <button onclick="press('3')">3</button>
+        <button onclick="press('−')">−</button>
+
+        <button onclick="press('0')">0</button>
+        <button onclick="press('+')">+</button>
+        <button onclick="backspace()">⌫</button>
+        <button onclick="clearExpression()">C</button>
+    </div>
+
+    <input type="text" id="totalAmount" class="readonly" placeholder="Total Payable ₹" readonly>
+
+    <!-- Received notes -->
+    <div class="notes">
+        <button onclick="addNote(1)">₹1</button>
+        <button onclick="addNote(2)">₹2</button>
+        <button onclick="addNote(5)">₹5</button>
+
+        <button onclick="addNote(10)">₹10</button>
+        <button onclick="addNote(20)">₹20</button>
+        <button onclick="addNote(50)">₹50</button>
+
+        <button onclick="addNote(100)">₹100</button>
+        <button onclick="addNote(200)">₹200</button>
+        <button onclick="addNote(500)">₹500</button>
+    </div>
+
+    <div class="note-actions">
+        <button onclick="undoLastNote()">Undo Last</button>
+        <button onclick="resetReceived()">Reset Received</button>
+    </div>
+
+    <input type="text" id="receivedAmount" class="readonly" placeholder="Received Amount ₹" readonly>
+
+    <div id="result" class="result"></div>
+    <div id="changeSuggestion" class="change-box"></div>
+</div>
+
+<script>
+const display = document.getElementById("display");
+const totalAmountField = document.getElementById("totalAmount");
+const receivedAmountField = document.getElementById("receivedAmount");
+const resultDiv = document.getElementById("result");
+const changeBox = document.getElementById("changeSuggestion");
+
+let totalPayable = 0;
+let receivedAmount = 0;
+let noteHistory = [];
+
+const returnNotes = [500,200,100,50,20,10,5,2,1];
+
+function press(val) {
+    display.value += val;
+    calculateLive();
+}
+
+function backspace() {
+    display.value = display.value.slice(0, -1);
+    calculateLive();
+}
+
+function clearExpression() {
+    display.value = "";
+    totalPayable = 0;
+    totalAmountField.value = "";
+    calculateChange();
+}
+
+function calculateLive() {
+    try {
+        const expr = display.value.replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-");
+        const res = eval(expr);
+        if (Number.isFinite(res)) {
+            totalPayable = res;
+            totalAmountField.value = "₹ " + totalPayable;
+            calculateChange();
+        }
+    } catch {}
+}
+
+function addNote(val) {
+    noteHistory.push(val);
+    receivedAmount += val;
+    receivedAmountField.value = "₹ " + receivedAmount;
+    calculateChange();
+}
+
+function undoLastNote() {
+    if (!noteHistory.length) return;
+    receivedAmount -= noteHistory.pop();
+    receivedAmountField.value = receivedAmount ? "₹ " + receivedAmount : "";
+    calculateChange();
+}
+
+function resetReceived() {
+    noteHistory = [];
+    receivedAmount = 0;
+    receivedAmountField.value = "";
+    resultDiv.textContent = "";
+    changeBox.innerHTML = "";
+}
+
+function calculateChange() {
+    changeBox.innerHTML = "";
+
+    if (totalPayable <= 0 || receivedAmount <= 0) {
+        resultDiv.textContent = "";
+        return;
+    }
+
+    if (receivedAmount < totalPayable) {
+        resultDiv.textContent = "Received amount is less than payable";
+        resultDiv.className = "result error";
+        return;
+    }
+
+    const change = receivedAmount - totalPayable;
+    resultDiv.textContent = `Return Amount: ₹${change}`;
+    resultDiv.className = "result success";
+
+    suggestChange(change);
+}
+
+function suggestChange(amount) {
+    if (amount === 0) {
+        changeBox.innerHTML = "Exact amount received 👍";
+        return;
+    }
+
+    let remaining = amount;
+    let container = document.createElement("div");
+    container.className = "change-buttons";
+
+    for (let n of returnNotes) {
+        const count = Math.floor(remaining / n);
+        for (let i = 0; i < count; i++) {
+            const btn = document.createElement("div");
+            btn.textContent = "₹" + n;
+            container.appendChild(btn);
+            remaining -= n;
+        }
+    }
+
+    changeBox.innerHTML = "<b>Suggested Notes to Return:</b>";
+    changeBox.appendChild(container);
+}
+
+function resetAllProcess() {
+    display.value = "";
+    totalAmountField.value = "";
+    receivedAmountField.value = "";
+    resultDiv.textContent = "";
+    changeBox.innerHTML = "";
+    totalPayable = 0;
+    receivedAmount = 0;
+    noteHistory = [];
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
